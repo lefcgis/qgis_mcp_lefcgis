@@ -1,2 +1,226 @@
-# qgis_mcp_lefcgis
-Cómo usar QGIS MCP en la práctica profesional
+<div align="center">
+
+# QGIS MCP — Guía General de Instalación
+**Model Context Protocol para QGIS y Claude AI**
+
+[![QGIS Version](https://img.shields.io/badge/QGIS-3.28%2B-green.svg)](https://qgis.org)
+[![Python Version](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://python.org)
+[![Claude Desktop](https://img.shields.io/badge/Claude-Desktop-orange.svg)](https://claude.ai)
+
+</div>
+
+---
+
+## 📍 ¿Qué es QGIS MCP?
+
+**QGIS MCP** conecta Claude AI con QGIS Desktop a través del **Model Context Protocol (MCP)**. Permite que Claude controle QGIS directamente mediante lenguaje natural para:
+- Cargar y gestionar capas (vectoriales y raster).
+- Ejecutar algoritmos de procesamiento.
+- Aplicar simbología.
+- Renderizar mapas.
+- Ejecutar código PyQGIS.
+
+### ⚙️ Arquitectura de la Conexión
+
+```mermaid
+graph TD
+    A[Tú escribes en Claude Desktop] -->|Petición| B(Servidor MCP Python)
+    B -->|Socket TCP Puerto 9876| C(Plugin QGIS MCP en QGIS)
+    C -->|Ejecuta acciones| D[PyQGIS]
+```
+
+> **⚠️ IMPORTANTE:** El flujo principal funciona con **Claude Desktop** (aplicación instalada).
+
+---
+
+## 📋 Requisitos Previos
+
+- **Sistema Operativo:** Windows 10/11
+- **QGIS:** Versión 3.28 o superior (probado en 3.44)
+- **Claude:** [Claude Desktop](https://claude.ai/download) instalado
+- **Herramientas de versionado:** Git instalado
+- **Python:** 3.12 o superior (generalmente incluido en QGIS/OSGeo4W)
+
+---
+
+## 🚀 Instalación Paso a Paso
+
+### PASO 1 — Instalar el gestor de paquetes `uv`
+
+Abre **PowerShell** y ejecuta el siguiente comando para instalar `uv`:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Cierra y vuelve a abrir PowerShell. Agrega `uv` a tus variables de entorno PATH permanentemente:
+
+```powershell
+[System.Environment]::SetEnvironmentVariable("Path", "C:\Users\lferrer\.local\bin;" + [System.Environment]::GetEnvironmentVariable("Path", "User"), "User")
+```
+
+Verifica la instalación *(Debe mostrar `uv 0.11.x` o superior)*:
+```powershell
+uv --version
+```
+
+### PASO 2 — Clonar el repositorio QGIS MCP
+
+```powershell
+git clone https://github.com/nkarasiak/qgis-mcp.git C:\qgis-mcp
+```
+
+### PASO 3 — Preparar el paquete Python
+
+Ingresa al directorio clonado:
+```powershell
+cd C:\qgis-mcp
+```
+
+Reescribe el archivo `pyproject.toml` (asegúrate de incluir `package = true` para que `uv` instale el entry point). Puedes ejecutar este script en PowerShell:
+
+```powershell
+$toml = @"
+[project]
+name = "qgis-mcp"
+version = "0.2.1"
+description = "QGIS integration through the Model Context Protocol"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp[cli]>=1.20.0",
+]
+
+[project.scripts]
+qgis-mcp-server = "qgis_mcp.server:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-asyncio>=0.23"]
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+"@
+[System.IO.File]::WriteAllText("C:\qgis-mcp\pyproject.toml", $toml, [System.Text.UTF8Encoding]::new($false))
+```
+
+Instala las dependencias y verifica el servidor:
+```powershell
+C:\Users\lferrer\.local\bin\uv.exe sync
+C:\Users\lferrer\.local\bin\uv.exe run qgis-mcp-server
+```
+*(Debe mostrar un mensaje indicando que el servidor inicia y esperará conexión en el puerto 9876. Usa `Ctrl+C` para detenerlo).*
+
+### PASO 4 — Instalar el plugin en QGIS
+
+Copia el plugin hacia el directorio de perfiles de QGIS:
+```powershell
+Copy-Item -Recurse "C:\qgis-mcp\qgis_mcp_plugin" "C:\Users\lferrer\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\qgis_mcp_plugin"
+```
+
+Luego, dentro de QGIS:
+1. Ve a **Complementos → Administrar e instalar complementos**.
+2. En la pestaña **"Instalados"**, busca **QGIS MCP** y marca la casilla ✅.
+3. Aparecerá un botón MCP *(ícono de cadena verde)* en la barra de herramientas.
+4. Haz clic en el botón → Puerto `9876` → Marca **Auto-start on startup** ✅ (para que inicie automáticamente).
+
+### PASO 5 — Configurar Claude Desktop
+
+Crea el archivo de configuración **sin BOM** (esto es crítico en Windows para evitar errores en Claude):
+
+```powershell
+New-Item -ItemType Directory -Force "C:\Users\lferrer\AppData\Roaming\Claude"
+
+$json = @"
+{
+  "mcpServers": {
+    "qgis": {
+      "command": "C:/Users/lferrer/.local/bin/uv.exe",
+      "args": [
+        "run",
+        "--directory",
+        "C:/qgis-mcp",
+        "qgis-mcp-server"
+      ]
+    }
+  }
+}
+"@
+[System.IO.File]::WriteAllText("C:\Users\lferrer\AppData\Roaming\Claude\claude_desktop_config.json", $json, [System.Text.UTF8Encoding]::new($false))
+```
+
+### PASO 6 — Verificar la conexión
+
+1. Abre QGIS (el plugin iniciará el servidor en el puerto 9876).
+2. Cierra Claude Desktop por completo (si estaba abierto): `taskkill /F /IM "Claude.exe"`.
+3. Abre Claude Desktop.
+4. Ve a **Ajustes → Desarrollador**. El servidor `qgis` debe aparecer en estado **running** 🟢.
+5. En el chat de Claude, prueba escribiendo:
+   > *"Ping QGIS to check connection, then tell me the QGIS version installed"*
+
+---
+
+## 🛠️ Herramientas Disponibles
+
+El protocolo MCP habilita hasta **51 herramientas**. Las principales incluyen:
+
+| Herramienta | Descripción |
+|---|---|
+| `ping` | Verificar conexión con QGIS |
+| `get_qgis_info` | Versión de QGIS, plugins instalados |
+| `create_new_project` | Crear nuevo proyecto .qgz |
+| `load_project` | Abrir proyecto existente |
+| `get_project_info` | Info del proyecto activo |
+| `add_vector_layer` | Cargar capa vectorial (SHP, GPKG, etc.) |
+| `add_raster_layer` | Cargar capa raster (TIF, etc.) |
+| `get_layers` | Listar todas las capas del proyecto |
+| `remove_layer` | Eliminar capa por ID |
+| `zoom_to_layer` | Zoom a extensión de una capa |
+| `get_layer_features` | Extraer features de una capa vectorial |
+| `execute_processing` | Ejecutar algoritmos del Procesador |
+| `save_project` | Guardar el proyecto |
+| `render_map` | Exportar el mapa como imagen PNG |
+| `execute_code` | ⚠️ Ejecutar código PyQGIS arbitrario |
+
+---
+
+## 🆘 Solución de Problemas
+
+| Problema | Causa | Solución |
+| --- | --- | --- |
+| **Error: `is not valid JSON` en Claude** | PowerShell guardó el JSON con BOM (una marca invisible). | Usar `[System.Text.UTF8Encoding]::new($false)` al escribir el archivo desde PowerShell. |
+| **Servidor como `failed` en Claude** | Claude no encuentra `uv.exe` o el directorio. | Usar rutas absolutas en el archivo de config y reiniciar Claude (`taskkill /F /IM "Claude.exe"`). |
+| **`ModuleNotFoundError: No module named 'qgis_mcp'`** | Paquete no instalado en entorno virtual. | Agregar `package = true` en `[tool.uv]` de `pyproject.toml` y correr `uv sync`. |
+| **Plugin no aparece en QGIS** | Carpeta mal ubicada. | Asegurar que esté en la ruta correcta de `AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\`. |
+| **`execute_code` devuelve error** | Error de sintaxis en PyQGIS o referencia. | Probar el código en la consola Python de QGIS antes de enviarlo por MCP. |
+
+---
+
+## 🛡️ Advertencias de Seguridad
+
+- ⚠️ La herramienta `execute_code` permite ejecutar **cualquier código Python** en tu máquina. Úsalo con extrema precaución.
+- ⚠️ No utilices MCP en proyectos con datos confidenciales si esto viola las políticas de uso de IA de tu organización.
+- ⚠️ Mantén el servidor MCP activo solo cuando lo necesites. Puedes desactivar el **Auto-start** del plugin si prefieres un inicio manual.
+
+---
+
+## 🔗 Referencias Útiles
+
+- [Repositorio principal de QGIS MCP](https://github.com/nkarasiak/qgis-mcp)
+- [Plugin en QGIS.org](https://plugins.qgis.org/plugins/qgis_mcp_plugin/)
+- [Documentación MCP de Anthropic](https://docs.anthropic.com/en/docs/agents-and-tools/mcp)
+- [Repositorio original (jjsantos01)](https://github.com/jjsantos01/qgis_mcp)
+- Comunidades: [QGIS Oficial](https://qgis.org/) | [QGIS Perú](https://qgis.pe/) | [QGIS España](https://www.qgis.es/) | [QGIS Brasil](https://qgisbrasil.org/)
+
+---
+*Guía desarrollada por Lucho Ferrer (Asociación QGIS Perú / España) | El Laboratorio de Lucho.*
