@@ -243,7 +243,4 @@ Claude responderá usando herramientas reales (verás el ícono 🔨 en la barra
 - Plugin en QGIS.org: https://plugins.qgis.org/plugins/qgis_mcp_plugin/
 - Documentación MCP de Anthropic: https://docs.anthropic.com/en/docs/agents-and-tools/mcp
 - Repo original (jjsantos01): https://github.com/jjsantos01/qgis_mcp
-- QGIS: https://qgis.org/
-- QGIS Perú: https://qgis.pe/
-- QGIS España: https://www.qgis.es/
-- QGIS Brasil: https://qgisbrasil.org/
+- Comunidades: [QGIS Oficial](https://qgis.org/) | [QGIS Perú](https://qgis.pe/) | [QGIS España](https://www.qgis.es/) | [QGIS Brasil](https://qgisbrasil.org/)
