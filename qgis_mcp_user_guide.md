@@ -144,7 +144,4 @@ print(log)
 
 - Repositorio QGIS MCP: https://github.com/nkarasiak/qgis-mcp
 - Documentación PyQGIS: https://docs.qgis.org/3.40/en/docs/pyqgis_developer_cookbook/
-- QGIS: https://qgis.org/
-- QGIS Perú: https://qgis.pe/
-- QGIS España: https://www.qgis.es/
-- QGIS Brasil: https://qgisbrasil.org/
+- Comunidades: [QGIS Oficial](https://qgis.org/) | [QGIS Perú](https://qgis.pe/) | [QGIS España](https://www.qgis.es/) | [QGIS Brasil](https://qgisbrasil.org/)
